@@ -21,41 +21,41 @@ SDL::SDL(std::string path) {
                 ifs >> this->output;
             }
             else if(!tag.compare(("eye"))){
-                T3* eye = new T3();
-                ifs >> eye->x
-                    >> eye->y
-                    >> eye->z;
+                T3 eye = T3();
+                ifs >> eye.x
+                    >> eye.y
+                    >> eye.z;
                 this->eye = eye;
             }
             else if(!tag.compare("ortho")){
-                Ortho* ortho = new Ortho();
-                ifs >> ortho->x0
-                    >> ortho->y0
-                    >> ortho->x1
-                    >> ortho->y1;
+                Ortho ortho = Ortho();
+                ifs >> ortho.x0
+                    >> ortho.y0
+                    >> ortho.x1
+                    >> ortho.y1;
                 this->ortho = ortho;
             }
             else if(!tag.compare(("size"))){
-                Size* size = new Size();
-                ifs >> size->w
-                    >> size->h;
+                Size size = Size();
+                ifs >> size.w
+                    >> size.h;
                 this->size = size;
             }
             else if(!tag.compare("background")){
-                T3* background = new T3();
-                ifs >> background->x
-                    >> background->y
-                    >> background->z;
+                T3 background = T3();
+                ifs >> background.x
+                    >> background.y
+                    >> background.z;
                 this->background = background;
             }
             else if(!tag.compare("ambient")){
                 ifs >> this->ambient;
             }
             else if(!tag.compare("light")){
-                Light* light = new Light();
-                ifs >> light->coords->x
-                    >> light->coords->y
-                    >> light->coords->z;
+                Light light = Light();
+                ifs >> light.coords.x
+                    >> light.coords.y
+                    >> light.coords.z;
                 this->lights.push_back(light);
             }
             else if(!tag.compare("supersample")) {
@@ -67,27 +67,28 @@ SDL::SDL(std::string path) {
                 ifs >> this->depth;
             }
             else if(!tag.compare("object")){
-                Object* object = new Object();
-                ifs >> object->a
-                    >> object->b
-                    >> object->c
-                    >> object->d
-                    >> object->e
-                    >> object->f
-                    >> object->g
-                    >> object->h
-                    >> object->j
-                    >> object->k
-                    >> object->color->r
-                    >> object->color->g
-                    >> object->color->b
-                    >> object->ka
-                    >> object->kd
-                    >> object->ks
-                    >> object->n
-                    >> object->KS
-                    >> object->KT
-                    >> object->ir;
+                double a, b, c, d, e, f, g, h, j, k, red, green, blue, ka, kd, ks, n, KS, KT, ir;
+                ifs >> a
+                    >> b
+                    >> c
+                    >> d
+                    >> e
+                    >> f
+                    >> g
+                    >> h
+                    >> j
+                    >> k
+                    >> red
+                    >> green
+                    >> blue
+                    >> ka
+                    >> kd
+                    >> ks
+                    >> n
+                    >> KS
+                    >> KT
+                    >> ir;
+                Object object = Object(a, b, c, d, e, f, g, h, j, k, ka, kd, ks, n, KS, KT, ir, red, green, blue);
                 this->objects.push_back(object);
             }
         }
@@ -95,38 +96,23 @@ SDL::SDL(std::string path) {
     ifs.close();
 }
 
-SDL::~SDL() {
-    delete this->eye;
-    delete this->background;
-    delete this->ortho;
-    delete this->size;
-    for(int i = 0; i != this->lights.size(); ++i){
-        delete this->lights[i];
-    }
-    for(int i = 0; i != this->objects.size(); ++i){
-        delete this->objects[i];
-    }
-    this->lights.clear();
-    this->objects.clear();
-}
-
 std::string SDL::getOutput() {
     return this->output;
 }
 
-T3* SDL::getEye(){
+T3 SDL::getEye(){
     return this->eye;
 }
 
-Ortho* SDL::getOrtho(){
+Ortho SDL::getOrtho(){
     return this->ortho;
 }
 
-Size* SDL::getSize(){
+Size SDL::getSize(){
     return this->size;
 }
 
-T3* SDL::getBackground(){
+T3 SDL::getBackground(){
     return this->background;
 }
 
@@ -134,7 +120,7 @@ double SDL::getAmbient(){
     return this->ambient;
 }
 
-std::vector<Light*> SDL::getLights(){
+std::vector<Light> SDL::getLights(){
     return this->lights;
 }
 
@@ -146,6 +132,6 @@ double SDL::getDepth(){
     return this->depth;
 }
 
-std::vector<Object*> SDL::getObjects(){
+std::vector<Object> SDL::getObjects(){
     return this->objects;
 }

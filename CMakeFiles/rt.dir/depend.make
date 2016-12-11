@@ -5,5 +5,4 @@ CMakeFiles/rt.dir/main.cpp.o: Support/Header.h
 CMakeFiles/rt.dir/main.cpp.o: Support/SDL.cpp
 CMakeFiles/rt.dir/main.cpp.o: Support/SDL.h
 CMakeFiles/rt.dir/main.cpp.o: main.cpp
-CMakeFiles/rt.dir/main.cpp.o: glfw/include/GLFW/glfw3.h
 
