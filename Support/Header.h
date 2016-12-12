@@ -4,7 +4,7 @@
 
 #ifndef RT_HEADER_H
 #define RT_HEADER_H
-
+#define INF 1e10
 #include <utility>
 #include <cstdio>
 #include <vector>
@@ -56,7 +56,7 @@ struct T3 {
         return sqrt(x*x + y*y + z*z);
     }
 
-    T3 normalizacao() { //Normalizacao do vetor
+    T3 normalizar() { //Normalizacao do vetor
         T3 ret;
         ret.x = x;
         ret.y = y;
@@ -89,29 +89,15 @@ struct Light {
 struct Camera {
     T3 coords, dir, u, v;
     double dist, hx, hy;
-    Camera(double cx, double cy, double cz, double dx, double dy, double dz, double ux, double uy,
-           double uz, double vx, double vy, double vz, double dist, double hx, double hy) {
-        coords.x = cx;
-        coords.y = cy;
-        coords.z = cz;
-        dir.x = dx;
-        dir.y = dy;
-        dir.z = dz;
-        u.x = ux;
-        u.y = uy;
-        u.z = uz;
-        v.x = vx;
-        v.y = vy;
-        v.z = vz;
+    Camera(T3& coods, T3& u, T3& v, double dist, double hx, double hy) {
+        dir = T3{0,0,1};    //The ortho plain is fixed on the z plan.
+        this->coords = coords;
+        this->u = u;
+        this->v = v;
         this->dist = dist;
         this->hx = hx;
         this->hy = hy;
     }
-};
-
-struct Ray {
-    T3 origin, dir;
-    int depth;
 };
 
 struct Object{
@@ -143,12 +129,32 @@ struct Object{
     }
 };
 
-struct Scene {
-    std::vector<Object> objects;
-    std::vector<Light> lights;
+struct Ray {
+    T3 org, dir;
+    int depth;
+    Ray(T3 org, T3 dir, int depth){
+        this->org = org;
+        this->dir = dir;
+        this->depth = depth;
+    }
 };
 
-double intersect(T3 ta,T3 tb, Object *obj) {
+double intersect(Ray ray, Object *obj )
+
+//  Compute the intersection point, if it exists, between the given ray
+//  and the given object
+//
+//  Victor uses a strange formula from Watt & Watt for quadrics:
+//
+//     Ax^2 + Ey^2 + Hz^2 + Bxy + Fyz + Cxz + Dx + Gy + Jz + K
+//
+//  rather than the standard formula:
+//
+//     Ax^2 + By^2 + Cz^2 + 2Dxy + 2Eyz + 2Fxz + 2Gx + 2Hy + 2Jz + K
+//
+//  ray:  Ray being shot into scene
+//  obj:  Object to test for intersection
+{
     double  a, b, c, d, e;// Coefficents of equation of..
     double  f, g, h, j, k;// ..quadric surface
     double  acoef, bcoef, ccoef;// Intersection coefficents
@@ -170,13 +176,13 @@ double intersect(T3 ta,T3 tb, Object *obj) {
     j = obj->j;
     k = obj->k;
 
-    dx = tb.x ;
-    dy = tb.y ;
-    dz = tb.z ;
+    dx = ray.dir.x - ray.org.x;
+    dy = ray.dir.y - ray.org.y;
+    dz = ray.dir.z - ray.org.z;
 
-    x0 = ta.x;
-    y0 = ta.y;
-    z0 = ta.z;
+    x0 = ray.org.x;
+    y0 = ray.org.y;
+    z0 = ray.org.z;
 
     acoef = 2 * f * dx * dz + 2 * e * dy * dz + c * dz * dz + b * dy * dy +
             a * dx * dx + 2 * d * dx * dy;
@@ -190,9 +196,11 @@ double intersect(T3 ta,T3 tb, Object *obj) {
             2 * e * y0 * z0 + 2 * d * x0 * y0 + c * z0 * z0 + 2 * h * y0 +
             2 * j * z0 + k;
 
+    //  The following was modified by David J. Brandow to allow for planar
+    //  quadrics
+
     if ( 1.0 + acoef == 1.0 ) {
         if ( 1.0 + bcoef == 1.0 ) {
-
             return -1.0;
         }
 
@@ -201,9 +209,7 @@ double intersect(T3 ta,T3 tb, Object *obj) {
     } else {
         disc = bcoef * bcoef - 4 * acoef * ccoef;
         if ( 1.0 + disc < 1.0 ) {
-
             return -1.0;
-
         }
 
         root = sqrt( disc );
@@ -217,6 +223,24 @@ double intersect(T3 ta,T3 tb, Object *obj) {
         return -1.0;
 
     return t;
+}// End procedure intersect
+
+T3 getDir(Ortho ortho, Size size, int i, int j) {
+    T3 ret;
+    ret.z = 0;
+    double pw, ph;
+    //Calculando o comprimento e a largura de cada pixel.
+    pw = (ortho.x0 > ortho.x1) ? (ortho.x0 - ortho.x1)/ size.h : (ortho.x1 - ortho.x0)/ size.w;
+    ph = (ortho.y0 > ortho.y1) ? (ortho.y0 - ortho.y1)/ size.h : (ortho.y1 - ortho.y0)/ size.h;
+
+    //Calculando as coordenadas do pixel
+    ret.x = (ortho.x0 + pw/2) + (pw*j);
+    ret.y = (ortho.y0 + ph/2) + (ph*i);
+    return ret;
+}
+
+double rayTracing() {
+
 }
 
 
