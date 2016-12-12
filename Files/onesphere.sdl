@@ -5,7 +5,7 @@ ortho -1 -1 1 1
 # x y z  intensity
 light 0.0 1.0 1.0 1.0
 #ambient light
-ambient 0.5
+ambient 1
 #object definition
 # a b c d e f g h j k red green blue Ka Kd Ks n
 # red sphere at x=0, y=0, z=-10 radius=1

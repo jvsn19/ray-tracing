@@ -7,6 +7,8 @@
 #IncludeRegexTransform: 
 
 /home/unkwis/Documents/PG/rt/Support/Header.h
+algorithm
+-
 utility
 -
 cstdio

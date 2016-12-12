@@ -61,7 +61,7 @@ class SDL {
     double ambient;
     std::vector<Light> lights;
     bool supersampling;
-    double depth;
+    int depth;
     std::vector<Object> objects;
     void read();    //Method to read the file and fill the attribute fields
 
@@ -75,7 +75,7 @@ public:
     double getAmbient();
     std::vector<Light> getLights();
     bool getSuperSampling();
-    double getDepth();
+    int getDepth();
     std::vector<Object> getObjects();
 };
 

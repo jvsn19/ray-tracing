@@ -8,10 +8,12 @@ int main(void){
     SDL sdl = SDL("Files/onesphere.sdl");
 
     //Recuperando os elementos da cena
-    Size size = sdl.getSize();
-    Ortho ortho = sdl.getOrtho();
-    vector<Object> objects = sdl.getObjects();
-    vector<Light> lights = sdl.getLights();
+    size = sdl.getSize();
+    ortho = sdl.getOrtho();
+    objects = sdl.getObjects();
+    lights = sdl.getLights();
+    background = sdl.getBackground();
+    ambient = sdl.getAmbient();
 
     cout << "P3" << endl;
     cout << size.w << " " << size.h << endl;
@@ -19,11 +21,9 @@ int main(void){
 
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
-            Ray ray = Ray(sdl.getEye(), getDir(ortho, size, i, j) - sdl.getEye(), 0);
-            for(int k = 0; k < objects.size(); ++k){
-                if(intersect(ray, &objects[k]) != -1) cout << "200" << endl;
-                else cout << 0 << endl;
-            }
+            Ray ray = Ray(sdl.getEye(), getDir(ortho, size, i, j) - sdl.getEye(), sdl.getDepth());
+            T3 cor = rayTracing(ray);
+            cout << cor.x*255 << " " << cor.y*255 << " " << cor.z *255<< endl;
         }
     }
     return 0;

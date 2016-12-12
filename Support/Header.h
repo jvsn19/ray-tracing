@@ -5,6 +5,7 @@
 #ifndef RT_HEADER_H
 #define RT_HEADER_H
 #define INF 1e10
+#include <algorithm>
 #include <utility>
 #include <cstdio>
 #include <vector>
@@ -12,6 +13,8 @@
 #include <fstream>
 #include <limits>
 #include <cmath>
+
+using namespace std;
 
 struct T3 {
     double x, y, z;
@@ -139,30 +142,22 @@ struct Ray {
     }
 };
 
-double intersect(Ray ray, Object *obj )
+Size size;
+Ortho ortho;
+vector<Object> objects;
+vector<Light> lights;
+T3 background;
+double ambient;
 
-//  Compute the intersection point, if it exists, between the given ray
-//  and the given object
-//
-//  Victor uses a strange formula from Watt & Watt for quadrics:
-//
-//     Ax^2 + Ey^2 + Hz^2 + Bxy + Fyz + Cxz + Dx + Gy + Jz + K
-//
-//  rather than the standard formula:
-//
-//     Ax^2 + By^2 + Cz^2 + 2Dxy + 2Eyz + 2Fxz + 2Gx + 2Hy + 2Jz + K
-//
-//  ray:  Ray being shot into scene
-//  obj:  Object to test for intersection
-{
-    double  a, b, c, d, e;// Coefficents of equation of..
-    double  f, g, h, j, k;// ..quadric surface
-    double  acoef, bcoef, ccoef;// Intersection coefficents
-    double  dx, dy, dz;// Direction - origin coordinates
-    double  disc;// Distance to intersection
-    double  root;// Root of distance to intersection
-    double  t;// Distance along ray to intersection
-    double  x0, y0, z0;// Origin coordinates
+double intersect(Ray ray, Object *obj ) {
+    double  a, b, c, d, e;
+    double  f, g, h, j, k;
+    double  acoef, bcoef, ccoef;
+    double  dx, dy, dz;
+    double  disc;
+    double  root;
+    double  t;
+    double  x0, y0, z0;
 
 
     a = obj->a;
@@ -196,9 +191,6 @@ double intersect(Ray ray, Object *obj )
             2 * e * y0 * z0 + 2 * d * x0 * y0 + c * z0 * z0 + 2 * h * y0 +
             2 * j * z0 + k;
 
-    //  The following was modified by David J. Brandow to allow for planar
-    //  quadrics
-
     if ( 1.0 + acoef == 1.0 ) {
         if ( 1.0 + bcoef == 1.0 ) {
             return -1.0;
@@ -223,14 +215,14 @@ double intersect(Ray ray, Object *obj )
         return -1.0;
 
     return t;
-}// End procedure intersect
+}
 
 T3 getDir(Ortho ortho, Size size, int i, int j) {
     T3 ret;
     ret.z = 0;
     double pw, ph;
     //Calculando o comprimento e a largura de cada pixel.
-    pw = (ortho.x0 > ortho.x1) ? (ortho.x0 - ortho.x1)/ size.h : (ortho.x1 - ortho.x0)/ size.w;
+    pw = (ortho.x0 > ortho.x1) ? (ortho.x0 - ortho.x1)/ size.w : (ortho.x1 - ortho.x0)/ size.w;
     ph = (ortho.y0 > ortho.y1) ? (ortho.y0 - ortho.y1)/ size.h : (ortho.y1 - ortho.y0)/ size.h;
 
     //Calculando as coordenadas do pixel
@@ -239,8 +231,40 @@ T3 getDir(Ortho ortho, Size size, int i, int j) {
     return ret;
 }
 
-double rayTracing() {
+int nextObject(Ray &ray, vector<Object> objects){
+    int ret = -1;
+    double dist = INF, distAux;
+    for(int i = 0; i < objects.size(); ++i){
+        distAux = intersect(ray, &objects[i]);
+        if(distAux != -1 && distAux < dist) {
+            dist = distAux;
+            ret = i;
+        }
+    }
+    return ret;
+}
 
+T3 rayTracing(Ray &ray) {
+    T3 ret;
+    int objectIndex = nextObject(ray, objects);
+    if (objectIndex < 0) {  //Nao houve colisao com nenhum objeto
+        ret.x = background.x;
+        ret.y = background.y;
+        ret.z = background.z;
+        return ret;
+    }
+    Object object = objects[objectIndex];
+    double intensidadeAmbiente = object.ka*ambient;
+
+    ret.x = object.color.r*intensidadeAmbiente;
+    ret.y = object.color.g*intensidadeAmbiente;
+    ret.z = object.color.b*intensidadeAmbiente;
+
+    ret.x = min(ret.x, 1.0);
+    ret.y = min(ret.y, 1.0);
+    ret.z = min(ret.z, 1.0);
+
+    return ret;
 }
 
 

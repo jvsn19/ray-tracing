@@ -128,7 +128,7 @@ bool SDL::getSuperSampling(){
     return this->supersampling;
 }
 
-double SDL::getDepth(){
+int SDL::getDepth(){
     return this->depth;
 }
 
