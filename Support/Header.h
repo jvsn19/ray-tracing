@@ -101,11 +101,12 @@ struct Camera {
 };
 
 struct Object{
-    double a, b, c, d, e ,f, g, h, j, k, ka, kd, ks, n, KS, KT, ir;
+    double a, b, c, d, e ,f, g, h, j, k, ka, kd, ks, KS, KT, ir;
+    int n;
     Color color;
 
     Object(double a, double b, double c, double d, double e, double f, double g, double h, double j, double k,
-           double ka, double kd, double ks, double n, double KS, double KT, double ir, double red, double green, double blue) {
+           double ka, double kd, double ks, int n, double KS, double KT, double ir, double red, double green, double blue) {
         this->a = a;
         this->b = b;
         this->c = c;
@@ -370,12 +371,33 @@ T3 normalQuadric(Object object, T3 point) {
     return ret;
 }
 
+//r = i - 2*n(<n,i>)
+double calcSpecularIntensity(Ray ray, Object object, Light light){
+    //Finding the normal vector(n)
+    T3 intersectPoint = intersectionPoint(ray, object);
+    T3 normalObject = normalQuadric(object, intersectPoint);
+    normalObject = normalize(normalObject);
 
-double caucSpecularIntensity(Ray ray, Object object, Light light){
-    //Vector pointing to the light font
+    //Vector pointing to the light font(i)
     T3 lightVector = light.dir;
     lightVector = lightVector*(-1);
     lightVector = normalize(lightVector);
+
+    double cosR = lightVector%normalObject;
+    if(cosR < 0) cosR = 0;
+    T3 r = normalObject*(2*cosR) - lightVector;
+    r = normalize(r);
+
+    Ray lightRay = Ray(intersectPoint, lightVector, 0);
+    if(!isShadow(lightRay)){
+        T3 v = ray.dir;
+        v = v*(-1);
+        v = normalize(v);
+        double cos = r%v;
+        if(cos < 0) cos = 0;
+        return light.intensity * object.ks * pow(cos, object.n);
+    }
+    return 0;
 }
 
 double calcDifusalIntensity(Ray ray, Object object, Light light) {
@@ -406,12 +428,12 @@ T3 shade (Object object, Ray ray){
     T3 ret;
     double intensidadeAmbiente = object.ka*ambient, intensidadeDifusa = 0.0, intensidadeEspecular = 0.0;
     for(int i = 0; i < lights.size(); ++i){
-        intensidadeEspecular += 0;
+        intensidadeEspecular += calcSpecularIntensity(ray, object, lights[i]);
         intensidadeDifusa += calcDifusalIntensity(ray, object, lights[i]);
     }
-    ret.x = object.color.r * (intensidadeAmbiente + intensidadeDifusa);
-    ret.y = object.color.g * (intensidadeAmbiente + intensidadeDifusa);
-    ret.z = object.color.b * (intensidadeAmbiente + intensidadeDifusa);
+    ret.x = object.color.r * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
+    ret.y = object.color.g * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
+    ret.z = object.color.b * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
 
     ret.x = min(ret.x, 1.0);
     ret.y = min(ret.y, 1.0);
