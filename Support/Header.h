@@ -31,7 +31,7 @@ struct T3 {
         T3 ret;
         ret.x = x*p;
         ret.y = y*p;
-        ret.z = x*p;
+        ret.z = z*p;
         return ret;
     }
 
@@ -59,15 +59,12 @@ struct T3 {
         return sqrt(x*x + y*y + z*z);
     }
 
-    T3 normalizar() { //Normalizacao do vetor
+    T3 normal() { //Normalizacao do vetor
         T3 ret;
-        ret.x = x;
-        ret.y = y;
-        ret.z = z;
         double n = this->norma();
-        ret.x /= n;
-        ret.y /=n;
-        ret.z /=n;
+        ret.x = x/n;
+        ret.y = y/n;
+        ret.z = z/n;
         return ret;
     }
 };
@@ -85,7 +82,7 @@ struct Size {
 };
 
 struct Light {
-    T3 coords;
+    T3 dir;
     double intensity;
 };
 
@@ -123,7 +120,7 @@ struct Object{
         this->kd = kd;
         this->ks = ks;
         this->n = n;
-        this->KS = ks;
+        this->KS = KS;
         this->KT = KT;
         this->ir = ir;
         color.r = red;
@@ -149,15 +146,76 @@ vector<Light> lights;
 T3 background;
 double ambient;
 
-double intersect(Ray ray, Object *obj ) {
-    double  a, b, c, d, e;
-    double  f, g, h, j, k;
-    double  acoef, bcoef, ccoef;
-    double  dx, dy, dz;
-    double  disc;
-    double  root;
-    double  t;
-    double  x0, y0, z0;
+T3  normalize( T3 v ) {
+    T3 retorno;
+    double denom;            // Temporary denominator
+
+    //  Absolute value of vector's coordinates
+
+    double x = ( v.x > 0.0 ) ? v.x : - v.x;
+    double y = ( v.y > 0.0 ) ? v.y : - v.y;
+    double z = ( v.z > 0.0 ) ? v.z : - v.z;
+
+
+    if ( x > y ) {
+        if ( x > z ) {
+            y = y / x;
+            z = z / x;
+            denom = 1.0 / ( x * sqrt( 1.0 + y * y + z * z ) );
+
+        } else {                 // z > x > y
+            if ( 1.0 + z > 1.0 ) {
+                y = y / z;
+                x = x / z;
+                denom = 1.0 / ( z * sqrt( 1.0 + y * y + x * x ) );
+            }
+        }
+
+    } else {
+        if ( y > z ) {
+            z = z / y;
+            x = x / y;
+            denom = 1.0 / ( y * sqrt( 1.0 + z * z + x * x ) );
+
+        } else {                 // x < y < z
+            if ( 1.0 + z > 1.0 ) {
+                y = y / z;
+                x = x / z;
+                denom = 1.0 / ( z * sqrt( 1.0 + y * y + x * x ) );
+            }
+        }
+    }
+
+    if ( 1.0 + x + y + z > 1.0 ) {
+        retorno = v*denom;
+    }
+    return retorno;
+}
+
+double intersect( Ray ray, Object *obj )
+
+//  Compute the intersection point, if it exists, between the given ray
+//  and the given object
+//
+//  Victor uses a strange formula from Watt & Watt for quadrics:
+//
+//     Ax^2 + Ey^2 + Hz^2 + Bxy + Fyz + Cxz + Dx + Gy + Jz + K
+//
+//  rather than the standard formula:
+//
+//     Ax^2 + By^2 + Cz^2 + 2Dxy + 2Eyz + 2Fxz + 2Gx + 2Hy + 2Jz + K
+//
+//  ray:  Ray being shot into scene
+//  obj:  Object to test for intersection
+{
+    double  a, b, c, d, e;        // Coefficents of equation of..
+    double  f, g, h, j, k;        // ..quadric surface
+    double  acoef, bcoef, ccoef;        // Intersection coefficents
+    double  dx, dy, dz;            // Direction - origin coordinates
+    double  disc;            // Distance to intersection
+    double  root;            // Root of distance to intersection
+    double  t;                // Distance along ray to intersection
+    double  x0, y0, z0;            // Origin coordinates
 
 
     a = obj->a;
@@ -171,9 +229,21 @@ double intersect(Ray ray, Object *obj ) {
     j = obj->j;
     k = obj->k;
 
-    dx = ray.dir.x - ray.org.x;
-    dy = ray.dir.y - ray.org.y;
-    dz = ray.dir.z - ray.org.z;
+    T3 temp;
+    temp.x = ray.dir.x;
+    temp.y = ray.dir.y;
+    temp.z = ray.dir.z;
+    temp = normalize(temp);
+
+//    cout << temp.x << " " << temp.y << " " << temp.z << endl;
+
+    dx = temp.x;
+    dy = temp.y;
+    dz = temp.z;
+
+    //dx = ray.dir.x/* - ray.org.x*/;
+    //dy = ray.dir.y/* - ray.org.y*/;
+    //dz = ray.dir.z/* - ray.org.z*/;
 
     x0 = ray.org.x;
     y0 = ray.org.y;
@@ -190,6 +260,9 @@ double intersect(Ray ray, Object *obj ) {
     ccoef = a * x0 * x0 + 2 * g * x0 + 2 * f * x0 * z0 + b * y0 * y0 +
             2 * e * y0 * z0 + 2 * d * x0 * y0 + c * z0 * z0 + 2 * h * y0 +
             2 * j * z0 + k;
+
+    //  The following was modified by David J. Brandow to allow for planar
+    //  quadrics
 
     if ( 1.0 + acoef == 1.0 ) {
         if ( 1.0 + bcoef == 1.0 ) {
@@ -215,54 +288,160 @@ double intersect(Ray ray, Object *obj ) {
         return -1.0;
 
     return t;
+}                    // End procedure intersect
+
+bool isShadow(Ray ray) {
+    bool retorno = false;
+    double dist = INF;
+    double distTemp = -1;
+
+    for(int i = 0; i < objects.size(); i++) {
+        distTemp = intersect(ray, &objects[i]);
+//        cout << distTemp << endl;
+        if(distTemp > 0 && distTemp < dist) {
+            dist = distTemp;
+        }
+    }
+    if(dist > 0 && dist < INF) retorno = true;
+
+    return retorno;
 }
 
-T3 getDir(Ortho ortho, Size size, int i, int j) {
+T3 getDir(int i, int j) {
     T3 ret;
     ret.z = 0;
     double pw, ph;
     //Calculando o comprimento e a largura de cada pixel.
-    pw = (ortho.x0 > ortho.x1) ? (ortho.x0 - ortho.x1)/ size.w : (ortho.x1 - ortho.x0)/ size.w;
-    ph = (ortho.y0 > ortho.y1) ? (ortho.y0 - ortho.y1)/ size.h : (ortho.y1 - ortho.y0)/ size.h;
+    pw = (ortho.x1 > ortho.x0) ? (ortho.x1 - ortho.x0)/ size.w : (ortho.x0 - ortho.x1)/ size.w;
+    ph = (ortho.y1 > ortho.y0) ? (ortho.y1 - ortho.y0)/ size.h : (ortho.y0 - ortho.y1)/ size.h;
 
     //Calculando as coordenadas do pixel
     ret.x = (ortho.x0 + pw/2) + (pw*j);
-    ret.y = (ortho.y0 + ph/2) + (ph*i);
+    ret.y = (ortho.y1 - ph/2) - (ph*i);
     return ret;
 }
 
-int nextObject(Ray &ray, vector<Object> objects){
+//Retorna o indice do objeto mais próximo ou -1 caso nao exista interseccao
+int nextObject(Ray ray, vector<Object> objects){
     int ret = -1;
-    double dist = INF, distAux;
+    double dist = INF, distAux = -1;
     for(int i = 0; i < objects.size(); ++i){
         distAux = intersect(ray, &objects[i]);
-        if(distAux != -1 && distAux < dist) {
+        if(distAux > 0 && distAux < dist) {
             dist = distAux;
             ret = i;
         }
     }
+    if (dist == INF) return -1;
+//    cout << ret << endl;
+    return ret;
+}
+
+T3 intersectionPoint(Ray ray, Object object) {
+    T3 ret;
+    ret.x = ray.dir.x;
+    ret.y = ray.dir.y;
+    ret.z = ray.dir.z;
+    ret = normalize(ret);
+    double distance = intersect(ray, &object);
+    ret = ret * distance;
+    ret = ret + ray.org;
+    return ret;
+}
+
+T3 normalQuadric(Object object, T3 point) {
+    T3 ret;
+    double x = point.x;
+    double y = point.y;
+    double z = point.z;
+    double a = object.a;
+    double b = object.b;
+    double c = object.c;
+    double d = object.d;
+    double e = object.e;
+    double f = object.f;
+    double g = object.g;
+    double h = object.h;
+    double j = object.j;
+    ret.x = (2*a*x) + (2*d*y) + (2*f*z) + (2*g);
+    ret.y = (2*b*y) + (2*d*x) + (2*e*z) + (2*h);
+    ret.z = (2*c*z) + (2*e*y) + (2*f*x) + (2*j);
+
+    return ret;
+}
+
+
+double caucSpecularIntensity(Ray ray, Object object, Light light){
+    //Vector pointing to the light font
+    T3 lightVector = light.dir;
+    lightVector = lightVector*(-1);
+    lightVector = normalize(lightVector);
+}
+
+double calcDifusalIntensity(Ray ray, Object object, Light light) {
+    //Finding the normal vector normalized
+    T3 point = intersectionPoint(ray, object);
+    T3 normalVec = normalQuadric(object, point);
+    normalVec = normalize(normalVec);
+
+    //Finding the light vector, pointing to the light font, normalized
+    T3 aux = light.dir;
+    aux = aux * (-1);
+    aux = normalize(aux);
+
+    //Test if this light ray intersect some object. If yes, there will be shadow
+    Ray lightRay = Ray(point, aux, 0);
+    if(!isShadow(lightRay)){
+        double cos = aux%normalVec;
+        if(cos < 0) {
+            cos = 0;
+        };
+        //Ip * kd * cos
+        return light.intensity * object.kd * cos;
+    }
+    return 0;
+}
+
+T3 shade (Object object, Ray ray){
+    T3 ret;
+    double intensidadeAmbiente = object.ka*ambient, intensidadeDifusa = 0.0, intensidadeEspecular = 0.0;
+    for(int i = 0; i < lights.size(); ++i){
+        intensidadeEspecular += 0;
+        intensidadeDifusa += calcDifusalIntensity(ray, object, lights[i]);
+    }
+    ret.x = object.color.r * (intensidadeAmbiente + intensidadeDifusa);
+    ret.y = object.color.g * (intensidadeAmbiente + intensidadeDifusa);
+    ret.z = object.color.b * (intensidadeAmbiente + intensidadeDifusa);
+
+    ret.x = min(ret.x, 1.0);
+    ret.y = min(ret.y, 1.0);
+    ret.z = min(ret.z, 1.0);
+
+    return ret;
+}
+
+T3 merge(Object object, T3 color) {
+    T3 ret;
+    ret.x = ((1 - object.KS - object.KT) * color.x);
+    ret.y = ((1 - object.KS - object.KT) * color.y);
+    ret.z = ((1 - object.KS - object.KT) * color.z);
     return ret;
 }
 
 T3 rayTracing(Ray &ray) {
     T3 ret;
     int objectIndex = nextObject(ray, objects);
-    if (objectIndex < 0) {  //Nao houve colisao com nenhum objeto
+    if (objectIndex < 0) {
         ret.x = background.x;
         ret.y = background.y;
         ret.z = background.z;
         return ret;
     }
     Object object = objects[objectIndex];
-    double intensidadeAmbiente = object.ka*ambient;
-
-    ret.x = object.color.r*intensidadeAmbiente;
-    ret.y = object.color.g*intensidadeAmbiente;
-    ret.z = object.color.b*intensidadeAmbiente;
-
-    ret.x = min(ret.x, 1.0);
-    ret.y = min(ret.y, 1.0);
-    ret.z = min(ret.z, 1.0);
+    T3 color;
+    color = shade(object, ray);
+//    cout << color.x << " " << color.y << " " << color.z << endl;
+    ret = merge(object, color);
 
     return ret;
 }

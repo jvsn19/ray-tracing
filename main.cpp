@@ -15,14 +15,19 @@ int main(void){
     background = sdl.getBackground();
     ambient = sdl.getAmbient();
 
+    for(int i = 0; i < lights.size(); ++i){
+        lights[i].dir = lights[i].dir*(-1);
+    }
+
     cout << "P3" << endl;
     cout << size.w << " " << size.h << endl;
     cout << 255 << endl;
-
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
-            Ray ray = Ray(sdl.getEye(), getDir(ortho, size, i, j) - sdl.getEye(), sdl.getDepth());
+            T3 direction = (getDir(i, j) - sdl.getEye());  //Direction of the ray vector
+            Ray ray = Ray(sdl.getEye(), direction, sdl.getDepth());
             T3 cor = rayTracing(ray);
+
             cout << cor.x*255 << " " << cor.y*255 << " " << cor.z *255<< endl;
         }
     }

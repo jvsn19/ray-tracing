@@ -53,9 +53,10 @@ SDL::SDL(std::string path) {
             }
             else if(!tag.compare("light")){
                 Light light = Light();
-                ifs >> light.coords.x
-                    >> light.coords.y
-                    >> light.coords.z;
+                ifs >> light.dir.x
+                    >> light.dir.y
+                    >> light.dir.z
+                    >> light.intensity;
                 this->lights.push_back(light);
             }
             else if(!tag.compare("supersample")) {
