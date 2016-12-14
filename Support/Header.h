@@ -146,6 +146,9 @@ vector<Object> objects;
 vector<Light> lights;
 T3 background;
 double ambient;
+bool supersampling;
+double pw;
+double ph;
 
 T3  normalize( T3 v ) {
     T3 retorno;
@@ -289,36 +292,20 @@ double intersect( Ray ray, Object *obj )
         return -1.0;
 
     return t;
-}                    // End procedure intersect
+}
 
 bool isShadow(Ray ray) {
-    bool retorno = false;
-    double dist = INF;
-    double distTemp = -1;
-
     for(int i = 0; i < objects.size(); i++) {
-        distTemp = intersect(ray, &objects[i]);
-//        cout << distTemp << endl;
-        if(distTemp > 0 && distTemp < dist) {
-            dist = distTemp;
-        }
+        if (intersect(ray, &objects[i]) != -1) return true;
     }
-    if(dist > 0 && dist < INF) retorno = true;
-
-    return retorno;
+    return false;
 }
 
 T3 getDir(int i, int j) {
     T3 ret;
     ret.z = 0;
-    double pw, ph;
-    //Calculando o comprimento e a largura de cada pixel.
-    pw = (ortho.x1 > ortho.x0) ? (ortho.x1 - ortho.x0)/ size.w : (ortho.x0 - ortho.x1)/ size.w;
-    ph = (ortho.y1 > ortho.y0) ? (ortho.y1 - ortho.y0)/ size.h : (ortho.y0 - ortho.y1)/ size.h;
-
-    //Calculando as coordenadas do pixel
     ret.x = (ortho.x0 + pw/2) + (pw*j);
-    ret.y = (ortho.y1 - ph/2) - (ph*i);
+    ret.y = (ortho.y0 + ph/2) + (ph*i);
     return ret;
 }
 
@@ -334,15 +321,11 @@ int nextObject(Ray ray, vector<Object> objects){
         }
     }
     if (dist == INF) return -1;
-//    cout << ret << endl;
     return ret;
 }
 
 T3 intersectionPoint(Ray ray, Object object) {
-    T3 ret;
-    ret.x = ray.dir.x;
-    ret.y = ray.dir.y;
-    ret.z = ray.dir.z;
+    T3 ret = ray.dir;
     ret = normalize(ret);
     double distance = intersect(ray, &object);
     ret = ret * distance;
@@ -373,12 +356,10 @@ T3 normalQuadric(Object object, T3 point) {
 
 //r = i - 2*n(<n,i>)
 double calcSpecularIntensity(Ray ray, Object object, Light light){
-    //Finding the normal vector(n)
     T3 intersectPoint = intersectionPoint(ray, object);
     T3 normalObject = normalQuadric(object, intersectPoint);
     normalObject = normalize(normalObject);
 
-    //Vector pointing to the light font(i)
     T3 lightVector = light.dir;
     lightVector = lightVector*(-1);
     lightVector = normalize(lightVector);
@@ -401,20 +382,17 @@ double calcSpecularIntensity(Ray ray, Object object, Light light){
 }
 
 double calcDifusalIntensity(Ray ray, Object object, Light light) {
-    //Finding the normal vector normalized
-    T3 point = intersectionPoint(ray, object);
-    T3 normalVec = normalQuadric(object, point);
-    normalVec = normalize(normalVec);
+    T3 intersectPoint = intersectionPoint(ray, object);
+    T3 normalObject = normalQuadric(object, intersectPoint);
+    normalObject = normalize(normalObject);
 
-    //Finding the light vector, pointing to the light font, normalized
-    T3 aux = light.dir;
-    aux = aux * (-1);
-    aux = normalize(aux);
+    T3 lightVec = light.dir;
+    lightVec = lightVec * (-1);
+    lightVec = normalize(lightVec);
 
-    //Test if this light ray intersect some object. If yes, there will be shadow
-    Ray lightRay = Ray(point, aux, 0);
+    Ray lightRay = Ray(intersectPoint, lightVec, 0);
     if(!isShadow(lightRay)){
-        double cos = aux%normalVec;
+        double cos = lightVec%normalObject;
         if(cos < 0) {
             cos = 0;
         };
@@ -426,14 +404,14 @@ double calcDifusalIntensity(Ray ray, Object object, Light light) {
 
 T3 shade (Object object, Ray ray){
     T3 ret;
-    double intensidadeAmbiente = object.ka*ambient, intensidadeDifusa = 0.0, intensidadeEspecular = 0.0;
+    double iAmbient = object.ka*ambient, iDifusal = 0.0, iSpecular = 0.0;
     for(int i = 0; i < lights.size(); ++i){
-        intensidadeEspecular += calcSpecularIntensity(ray, object, lights[i]);
-        intensidadeDifusa += calcDifusalIntensity(ray, object, lights[i]);
+        iSpecular += calcSpecularIntensity(ray, object, lights[i]);
+        iDifusal += calcDifusalIntensity(ray, object, lights[i]);
     }
-    ret.x = object.color.r * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
-    ret.y = object.color.g * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
-    ret.z = object.color.b * (intensidadeAmbiente + intensidadeDifusa) + intensidadeEspecular;
+    ret.x = object.color.r * (iAmbient + iDifusal) + iSpecular;
+    ret.y = object.color.g * (iAmbient + iDifusal) + iSpecular;
+    ret.z = object.color.b * (iAmbient + iDifusal) + iSpecular;
 
     ret.x = min(ret.x, 1.0);
     ret.y = min(ret.y, 1.0);
@@ -462,7 +440,6 @@ T3 rayTracing(Ray &ray) {
     Object object = objects[objectIndex];
     T3 color;
     color = shade(object, ray);
-//    cout << color.x << " " << color.y << " " << color.z << endl;
     ret = merge(object, color);
 
     return ret;

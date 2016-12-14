@@ -14,6 +14,9 @@ int main(void){
     lights = sdl.getLights();
     background = sdl.getBackground();
     ambient = sdl.getAmbient();
+    supersampling = sdl.getSuperSampling();
+    ph = fabs(ortho.x1 - ortho.x0) / size.w;    //Pixel's weight
+    pw = fabs(ortho.y1 - ortho.y0) / size.h;    //Pixel's height
 
     for(int i = 0; i < lights.size(); ++i){
         lights[i].dir = lights[i].dir*(-1);
@@ -27,7 +30,23 @@ int main(void){
             T3 direction = (getDir(i, j) - sdl.getEye());  //Direction of the ray vector
             Ray ray = Ray(sdl.getEye(), direction, sdl.getDepth());
             T3 cor = rayTracing(ray);
-
+            //Melhorar
+            if(supersampling) {
+                Ray extra = ray;
+                extra.dir.x -= pw/3.0;
+                extra.dir.y -= ph/3.0;
+                cor = cor + rayTracing(extra);
+                extra.dir.x += pw/3.0;
+                extra.dir.y -= ph/3.0;
+                cor = cor + rayTracing(extra);
+                extra.dir.x -= pw/3.0;
+                extra.dir.y += ph/3.0;
+                cor = cor + rayTracing(extra);
+                extra.dir.x += pw/3.0;
+                extra.dir.y += ph/3.0;
+                cor = cor + rayTracing(extra);
+                cor = cor*(1.0/4.0);
+            }
             cout << cor.x*255 << " " << cor.y*255 << " " << cor.z *255<< endl;
         }
     }
