@@ -133,6 +133,7 @@ struct Object{
 struct Ray {
     T3 org, dir;
     int depth;
+    Ray();
     Ray(T3 org, T3 dir, int depth){
         this->org = org;
         this->dir = dir;
@@ -147,6 +148,7 @@ vector<Light> lights;
 T3 background;
 double ambient;
 bool supersampling;
+int depth;
 double pw;
 double ph;
 
@@ -293,6 +295,38 @@ double intersect( Ray ray, Object *obj )
 
     return t;
 }
+T3 svmpy( double s, T3 v ) {
+   T3  result; 
+
+
+   result.x = s * v.x;
+   result.y = s * v.y;
+   result.z = s * v.z;
+   return result;
+}
+
+T3 vadd( T3 v1, T3 v2 ) {
+   T3 result;
+
+
+   result.x = v1.x + v2.x;
+   result.y = v1.y + v2.y;
+   result.z = v1.z + v2.z;
+   return result;
+}
+
+T3 vsub( T3 v1, T3 v2 ) {
+   T3  result;
+
+
+   result.x = v1.x - v2.x;
+   result.y = v1.y - v2.y;
+   result.z = v1.z - v2.z;
+   return result;
+}
+double dot( T3 v1, T3 v2 ) {
+   return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
 
 bool isShadow(Ray ray) {
     for(int i = 0; i < objects.size(); i++) {
@@ -352,6 +386,34 @@ T3 normalQuadric(Object object, T3 point) {
     ret.z = (2*c*z) + (2*e*y) + (2*f*x) + (2*j);
 
     return ret;
+}
+
+// calcula a normal e retorna-a normalizada
+T3 calcNormalNormalized(Object object, Ray ray) {
+    T3 point = intersectionPoint(ray, object);
+    T3 normal = normalQuadric(object, point);
+    normal = normalize(normal);
+    return normal;
+}
+
+// calcula o vetor a partir da constante e retorna-o normalizado
+T3 moveVector(double c, T3 ray) {
+    T3 toReturn;
+    toReturn.x = c*ray.x;
+    toReturn.y = c*ray.y;
+    toReturn.z = c*ray.z;
+
+    return toReturn;
+}
+
+// Calculate the ray to be reflected in the recursion
+Ray reflectionRay(Object object, Ray ray) {
+    T3 normal = calcNormalNormalized(object, ray);
+    double cosI = -dot(normal, ray.dir);
+    T3 aux = vadd(ray.dir, svmpy(2*cosI, normal));
+    int newDepth = ray.depth+1;
+    Ray toReturn(intersectionPoint(ray, object), aux, newDepth);
+    return toReturn;
 }
 
 //r = i - 2*n(<n,i>)
@@ -420,11 +482,11 @@ T3 shade (Object object, Ray ray){
     return ret;
 }
 
-T3 merge(Object object, T3 color) {
+T3 merge(Object object, T3 color, T3 refColor) {
     T3 ret;
-    ret.x = ((1 - object.KS - object.KT) * color.x);
-    ret.y = ((1 - object.KS - object.KT) * color.y);
-    ret.z = ((1 - object.KS - object.KT) * color.z);
+    ret.x = ((1 - object.KS - object.KT) * color.x) + (object.KS*refColor.x);
+    ret.y = ((1 - object.KS - object.KT) * color.y) + (object.KS*refColor.y);
+    ret.z = ((1 - object.KS - object.KT) * color.z) + (object.KS*refColor.z);
     return ret;
 }
 
@@ -440,7 +502,19 @@ T3 rayTracing(Ray &ray) {
     Object object = objects[objectIndex];
     T3 color;
     color = shade(object, ray);
-    ret = merge(object, color);
+
+    T3 refColor; refColor.x = 0; refColor.y = 0; refColor.z = 0;
+    T3 transColor; transColor.x = 0; transColor.y = 0; transColor.z = 0;
+
+    if(ray.depth < depth) {
+        if(object.KS > 0) {
+            Ray rayRef = reflectionRay(object, ray);
+            refColor=rayTracing(rayRef);
+        }
+    }
+
+
+    ret = merge(object, color, refColor);
 
     return ret;
 }

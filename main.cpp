@@ -5,7 +5,7 @@ using namespace std;
 //O vetor diretor da Camera sempre é (0,0,1) pois esse vetor deve ser paralelo ao vetor normal ao grid.
 
 int main(void){
-    SDL sdl = SDL("Files/onesphere.sdl");
+    SDL sdl = SDL("Files/twoplanesphere.sdl");
 
     //Recuperando os elementos da cena
     size = sdl.getSize();
@@ -15,6 +15,7 @@ int main(void){
     background = sdl.getBackground();
     ambient = sdl.getAmbient();
     supersampling = sdl.getSuperSampling();
+    depth = sdl.getDepth();
     ph = fabs(ortho.x1 - ortho.x0) / size.w;    //Pixel's weight
     pw = fabs(ortho.y1 - ortho.y0) / size.h;    //Pixel's height
 
@@ -28,7 +29,7 @@ int main(void){
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
             T3 direction = (getDir(i, j) - sdl.getEye());  //Direction of the ray vector
-            Ray ray = Ray(sdl.getEye(), direction, sdl.getDepth());
+            Ray ray = Ray(sdl.getEye(), direction, 0);
             T3 cor = rayTracing(ray);
             //Melhorar
             if(supersampling) {
