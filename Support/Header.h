@@ -295,38 +295,7 @@ double intersect( Ray ray, Object *obj )
 
     return t;
 }
-T3 svmpy( double s, T3 v ) {
-   T3  result; 
 
-
-   result.x = s * v.x;
-   result.y = s * v.y;
-   result.z = s * v.z;
-   return result;
-}
-
-T3 vadd( T3 v1, T3 v2 ) {
-   T3 result;
-
-
-   result.x = v1.x + v2.x;
-   result.y = v1.y + v2.y;
-   result.z = v1.z + v2.z;
-   return result;
-}
-
-T3 vsub( T3 v1, T3 v2 ) {
-   T3  result;
-
-
-   result.x = v1.x - v2.x;
-   result.y = v1.y - v2.y;
-   result.z = v1.z - v2.z;
-   return result;
-}
-double dot( T3 v1, T3 v2 ) {
-   return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
 
 bool isShadow(Ray ray) {
     for(int i = 0; i < objects.size(); i++) {
@@ -409,8 +378,10 @@ T3 moveVector(double c, T3 ray) {
 // Calculate the ray to be reflected in the recursion
 Ray reflectionRay(Object object, Ray ray) {
     T3 normal = calcNormalNormalized(object, ray);
-    double cosI = -dot(normal, ray.dir);
-    T3 aux = vadd(ray.dir, svmpy(2*cosI, normal));
+    T3 incident = ray.dir*(-1);
+    incident = normalize(incident);
+    double cosI = (normal%incident);
+    T3 aux = ((normal*2)*cosI)-incident;
     int newDepth = ray.depth+1;
     Ray toReturn(intersectionPoint(ray, object), aux, newDepth);
     return toReturn;
