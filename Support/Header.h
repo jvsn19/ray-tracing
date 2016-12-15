@@ -296,7 +296,7 @@ double intersect( Ray ray, Object *obj )
     return t;
 }
 T3 svmpy( double s, T3 v ) {
-   T3  result; 
+   T3  result;
 
 
    result.x = s * v.x;
@@ -496,19 +496,26 @@ T3 merge(Object object, T3 color, T3 refColor) {
     return ret;
 }
 
+void normalizeColor(T3 *color) {
+    color->x = min(color->x, 1.0);
+    color->y = min(color->y, 1.0);
+    color->z = min(color->z, 1.0);
+}
+
 T3 rayTracing(Ray &ray) {
     T3 ret;
     int objectIndex = nextObject(ray, objects);
     if (objectIndex < 0) {
-        if(ray.depth < depth){
-            ret.x = 0.0;
-            ret.y = 0.0;
-            ret.z = 0.0;
+        if(ray.depth == 0){
+            ret.x = background.x;
+            ret.y = background.y;
+            ret.z = background.z;
             return ret;
+
         }
-        ret.x = background.x;
-        ret.y = background.y;
-        ret.z = background.z;
+        ret.x = 0.0;
+        ret.y = 0.0;
+        ret.z = 0.0;
         return ret;
     }
     Object object = objects[objectIndex];
@@ -524,8 +531,9 @@ T3 rayTracing(Ray &ray) {
         }
     }
 
-
     ret = merge(object, color, refColor);
+
+    normalizeColor(&ret);
 
     return ret;
 }
