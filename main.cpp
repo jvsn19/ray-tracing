@@ -5,7 +5,7 @@ using namespace std;
 //O vetor diretor da Camera sempre é (0,0,1) pois esse vetor deve ser paralelo ao vetor normal ao grid.
 
 int main(void){
-    SDL sdl = SDL("Files/twoplanesphere.sdl");
+    SDL sdl = SDL("Files/onesphere.sdl");
 
     //Recuperando os elementos da cena
     size = sdl.getSize();
@@ -31,7 +31,7 @@ int main(void){
             T3 direction = (getDir(i, j) - sdl.getEye());  //Direction of the ray vector
             Ray ray = Ray(sdl.getEye(), direction, 0);
             T3 cor = rayTracing(ray);
-            //Melhorar
+           /* //Melhorar
             if(supersampling) {
                 Ray extra = ray;
                 extra.dir.x -= pw/3.0;
@@ -47,7 +47,7 @@ int main(void){
                 extra.dir.y += ph/3.0;
                 cor = cor + rayTracing(extra);
                 cor = cor*(1.0/4.0);
-            }
+            }*/
             cout << cor.x*255 << " " << cor.y*255 << " " << cor.z *255<< endl;
         }
     }

@@ -339,7 +339,7 @@ T3 getDir(int i, int j) {
     T3 ret;
     ret.z = 0;
     ret.x = (ortho.x0 + pw/2) + (pw*j);
-    ret.y = (ortho.y0 + ph/2) + (ph*i);
+    ret.y = (ortho.y1 - ph/2) - (ph*i);
     return ret;
 }
 
@@ -407,13 +407,19 @@ T3 moveVector(double c, T3 ray) {
 }
 
 // Calculate the ray to be reflected in the recursion
-Ray reflectionRay(Object object, Ray ray) {
-    T3 normal = calcNormalNormalized(object, ray);
-    double cosI = -dot(normal, ray.dir);
-    T3 aux = vadd(ray.dir, svmpy(2*cosI, normal));
-    int newDepth = ray.depth+1;
-    Ray toReturn(intersectionPoint(ray, object), aux, newDepth);
-    return toReturn;
+Ray reflectionRay(Object object, Ray ray){
+    T3 intersectPoint = intersectionPoint(ray, object);
+    T3 normalObject = normalQuadric(object, intersectPoint);
+    normalObject = normalize(normalObject);
+
+    T3 lightRay = ray.dir;
+    lightRay = lightRay*(-1);
+    lightRay = normalize(lightRay);
+
+    double cos = lightRay%normalObject;
+    Ray ret = Ray(intersectPoint, (normalObject*(2*cos)-lightRay), ray.depth+1);
+
+    return ret;
 }
 
 //r = i - 2*n(<n,i>)
@@ -494,6 +500,12 @@ T3 rayTracing(Ray &ray) {
     T3 ret;
     int objectIndex = nextObject(ray, objects);
     if (objectIndex < 0) {
+        if(ray.depth < depth){
+            ret.x = 0.0;
+            ret.y = 0.0;
+            ret.z = 0.0;
+            return ret;
+        }
         ret.x = background.x;
         ret.y = background.y;
         ret.z = background.z;
@@ -503,8 +515,7 @@ T3 rayTracing(Ray &ray) {
     T3 color;
     color = shade(object, ray);
 
-    T3 refColor; refColor.x = 0; refColor.y = 0; refColor.z = 0;
-    T3 transColor; transColor.x = 0; transColor.y = 0; transColor.z = 0;
+    T3 refColor = {0.0, 0.0, 0.0};
 
     if(ray.depth < depth) {
         if(object.KS > 0) {
