@@ -561,13 +561,6 @@ void normalizeColor(Color *color) {
 }
 
 Color getTextureColor(Object object, Ray ray) {
-    /*
-     * Metodo para retornar a cor da textura do objeto. As equacoes foram pesquisadas no livro "Ray Tracing from the
-     * ground up"
-     * 1) Calcular o ponto de interseccao do objeto com o raio
-     * 2) Calcular o theta e phi a partir do ponto de interseccao
-     * 3) Mapear theta e phi para (u,v) onde [0,1]x[0,1]
-     */
 
     T3 intersectPoint = intersectionPoint(ray, object);
     T3 N = normalQuadric(object, intersectPoint);
@@ -576,7 +569,7 @@ Color getTextureColor(Object object, Ray ray) {
     double phi = atan2(N.z, N.x);
     double theta = asin(N.y);
 
-    double u = 0.5 + phi * invTWO_PI;
+    double u = -(0.5 + phi * invTWO_PI);
     double v = 0.5 - theta*invPI;
 
     int column = (int) ((object.texture->wres -1 )*u);
@@ -586,18 +579,20 @@ Color getTextureColor(Object object, Ray ray) {
 
 Color shading (Object object, Ray ray){
     Color ret;
-
-    if(object.texture != nullptr) {
-        Color texture = getTextureColor(object, ray);
-        return texture;
-    }
     //Ia = ka*Il
     double Ia = object.ka*ambient, Id = 0.0, Is= 0.0;
     for(int i = 0; i < lights.size(); ++i){
         Is += calcSpecularIntensity(ray, object, lights[i]);
         Id+= calcDifusalIntensity(ray, object, lights[i]);
     }
-
+    if(object.texture != nullptr) {
+        Color texture = getTextureColor(object, ray);
+        ret.r = object.color.r*Ia + Id*texture.r + Is;
+        ret.g = object.color.g*Ia + Id*texture.g + Is;
+        ret.b = object.color.b*Ia + Id*texture.b + Is;
+        normalizeColor(&ret);
+        return ret;
+    }
     //Para a componente difusa e ambiente, devemos multiplicar o Id e Ia por Od
     ret.r = object.color.r*Ia + object.color.r*Id + Is;
     ret.g = object.color.g*Ia + object.color.g*Id + Is;
