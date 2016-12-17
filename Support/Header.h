@@ -173,6 +173,7 @@ struct Texture {
 };
 
 struct Object{
+    double x0, y0, z0, r;
     double a, b, c, d, e ,f, g, h, j, k, ka, kd, ks, KS, KT, ir;
     int n;
     Color color;
@@ -199,6 +200,10 @@ struct Object{
         this->ir = ir;
         this->color = color;
         this->texture = texture;
+        x0 = -g;
+        y0 = -h;
+        z0 = -j;
+        r = x0*x0 + y0*y0 + z0*z0 - k;
     }
 };
 
@@ -565,19 +570,17 @@ Color getTextureColor(Object object, Ray ray) {
      */
 
     T3 intersectPoint = intersectionPoint(ray, object);
+    T3 N = normalQuadric(object, intersectPoint);
+    N = normalize(N);
 
-    double theta = acos(intersectPoint.y);
-    double phi = atan2(intersectPoint.x, intersectPoint.z);
-    if(phi < 0.0) {
-        phi += TWO_PI;
-    }
+    double phi = atan2(N.z, N.x);
+    double theta = asin(N.y);
 
-    double u = phi * invTWO_PI;
-    double v = 1-theta*invPI;
+    double u = 0.5 + phi * invTWO_PI;
+    double v = 0.5 - theta*invPI;
 
     int column = (int) ((object.texture->wres -1 )*u);
     int row = (int) ((object.texture->hres - 1)*v);
-
     return object.texture->texMatrix[row][column];
 }
 
