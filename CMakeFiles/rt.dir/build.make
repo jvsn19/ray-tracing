@@ -90,16 +90,6 @@ rt_EXTERNAL_OBJECTS =
 
 rt: CMakeFiles/rt.dir/main.cpp.o
 rt: CMakeFiles/rt.dir/build.make
-rt: glfw/src/libglfw3.a
-rt: /usr/lib/x86_64-linux-gnu/libGLU.so
-rt: /usr/lib/x86_64-linux-gnu/libGL.so
-rt: /usr/lib/x86_64-linux-gnu/librt.so
-rt: /usr/lib/x86_64-linux-gnu/libm.so
-rt: /usr/lib/x86_64-linux-gnu/libX11.so
-rt: /usr/lib/x86_64-linux-gnu/libXrandr.so
-rt: /usr/lib/x86_64-linux-gnu/libXinerama.so
-rt: /usr/lib/x86_64-linux-gnu/libXxf86vm.so
-rt: /usr/lib/x86_64-linux-gnu/libXcursor.so
 rt: CMakeFiles/rt.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/unkwis/Documents/PG/rt/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable rt"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/rt.dir/link.txt --verbose=$(VERBOSE)

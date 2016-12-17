@@ -68,6 +68,7 @@ SDL::SDL(std::string path) {
                 ifs >> this->depth;
             }
             else if(!tag.compare("object")){
+
                 double a, b, c, d, e, f, g, h, j, k, red, green, blue, ka, kd, ks, n, KS, KT, ir;
                 ifs >> a
                     >> b
@@ -89,7 +90,8 @@ SDL::SDL(std::string path) {
                     >> KS
                     >> KT
                     >> ir;
-                Object object = Object(a, b, c, d, e, f, g, h, j, k, ka, kd, ks, n, KS, KT, ir, red, green, blue);
+                Color color = Color(red,green,blue);
+                Object object = Object(a, b, c, d, e, f, g, h, j, k, ka, kd, ks, n, KS, KT, ir, color);
                 this->objects.push_back(object);
             }
         }

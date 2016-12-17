@@ -71,6 +71,16 @@ struct T3 {
 
 struct Color{
     double r, g, b;
+    Color(){};
+    Color(double r, double g, double b) {
+        this->r = r;
+        this->g = g;
+        this->b = b;
+    }
+    Color operator *(double val){
+        Color color = Color(r*val, g*val, b*val);
+        return color;
+    }
 };
 
 struct Ortho{
@@ -106,7 +116,7 @@ struct Object{
     Color color;
 
     Object(double a, double b, double c, double d, double e, double f, double g, double h, double j, double k,
-           double ka, double kd, double ks, int n, double KS, double KT, double ir, double red, double green, double blue) {
+           double ka, double kd, double ks, int n, double KS, double KT, double ir, Color color) {
         this->a = a;
         this->b = b;
         this->c = c;
@@ -124,11 +134,10 @@ struct Object{
         this->KS = KS;
         this->KT = KT;
         this->ir = ir;
-        color.r = red;
-        color.g = green;
-        color.b = blue;
+        this->color = color;
     }
 };
+
 
 struct Ray {
     T3 org, dir;
@@ -139,6 +148,48 @@ struct Ray {
         this->dir = dir;
         this->depth = depth;
     }
+};
+
+struct Texture {
+    int wres, hres, maxGrey;
+    string magicValue;
+    vector< vector<Color> > texMatrix;
+
+    Texture();
+    Texture (string &filePath) {
+        int lineCounter = 1;
+        ifstream ifs;
+        ifs.open(filePath, std::ifstream::in);
+        while(ifs.eof()) {
+            if(ifs.peek() == '\n' || ifs.peek() == ' ') {
+                ifs.get();
+            }
+            else if(ifs.peek() == '#'){
+                ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+            else {
+                if(ifs.peek() == 'P'){
+                    ++lineCounter;
+                    ifs >> magicValue;
+                }
+                else if(lineCounter == 2) {
+                    ifs >> wres >> hres;
+                    ++lineCounter;
+                }
+                else {
+                    for(int i = 0; i < hres; ++i) {
+                        for(int j = 0; j < wres; ++j) {
+                            double r, g, b;
+                            ifs >> r >> g >> b;
+                            Color color = Color(r,g,b);
+                            texMatrix[i][j] = color;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 };
 
 Size size;
@@ -241,15 +292,9 @@ double intersect( Ray ray, Object *obj )
     temp.z = ray.dir.z;
     temp = normalize(temp);
 
-//    cout << temp.x << " " << temp.y << " " << temp.z << endl;
-
     dx = temp.x;
     dy = temp.y;
     dz = temp.z;
-
-    //dx = ray.dir.x/* - ray.org.x*/;
-    //dy = ray.dir.y/* - ray.org.y*/;
-    //dz = ray.dir.z/* - ray.org.z*/;
 
     x0 = ray.org.x;
     y0 = ray.org.y;
@@ -295,38 +340,9 @@ double intersect( Ray ray, Object *obj )
 
     return t;
 }
-T3 svmpy( double s, T3 v ) {
-   T3  result;
 
 
-   result.x = s * v.x;
-   result.y = s * v.y;
-   result.z = s * v.z;
-   return result;
-}
 
-T3 vadd( T3 v1, T3 v2 ) {
-   T3 result;
-
-
-   result.x = v1.x + v2.x;
-   result.y = v1.y + v2.y;
-   result.z = v1.z + v2.z;
-   return result;
-}
-
-T3 vsub( T3 v1, T3 v2 ) {
-   T3  result;
-
-
-   result.x = v1.x - v2.x;
-   result.y = v1.y - v2.y;
-   result.z = v1.z - v2.z;
-   return result;
-}
-double dot( T3 v1, T3 v2 ) {
-   return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
 
 bool isShadow(Ray ray) {
     for(int i = 0; i < objects.size(); i++) {
@@ -335,9 +351,14 @@ bool isShadow(Ray ray) {
     return false;
 }
 
+//Metodo complementar para formar o vetor diretor do raio.
 T3 getDir(int i, int j) {
     T3 ret;
-    ret.z = 0;
+    ret.z = 0;  //A janela esta no plano z = 0
+    /*pw e ph calculados anteriormente.
+     *pw = pixel weight. Calculado dividindo o comprimento total da janela fabs(x1 - x0) pela resolucao
+     *ph = pixel height. Mesmo calculo, porem utilizando y1 - y0
+    */
     ret.x = (ortho.x0 + pw/2) + (pw*j);
     ret.y = (ortho.y1 - ph/2) - (ph*i);
     return ret;
@@ -347,18 +368,27 @@ T3 getDir(int i, int j) {
 int nextObject(Ray ray, vector<Object> objects){
     int ret = -1;
     double dist = INF, distAux = -1;
+    //Simplesmente um for que percorre todos os objetos do meio
     for(int i = 0; i < objects.size(); ++i){
         distAux = intersect(ray, &objects[i]);
-        if(distAux > 0 && distAux < dist) {
+        if(distAux > 0 && distAux < dist) { //Caso eu ache algum objeto, testo se ele eh mais proximo que o meu atual
+            //Caso seja, substituo
             dist = distAux;
             ret = i;
         }
     }
-    if (dist == INF) return -1;
+    if (dist == INF) return -1; //Caso a distancia ao obj mais proximo for INF, nenhum obj foi encontrado
     return ret;
 }
 
+//Metodo para calcular o ponto de interseccao
 T3 intersectionPoint(Ray ray, Object object) {
+    /*
+     * O metodo consiste em, a partir do vetor diretor, encontrar a intersecao multiplicando o mesmo pela
+     * distancia ate o objeto. Dessa forma eu sei que esse vetor tocara o objeto
+     * Utilizando a equacao P = Q + tr
+     * IntersectionPoint = Origin + t*(ray.dir)
+     */
     T3 ret = ray.dir;
     ret = normalize(ret);
     double distance = intersect(ray, &object);
@@ -367,7 +397,13 @@ T3 intersectionPoint(Ray ray, Object object) {
     return ret;
 }
 
+//Metodo para retornar a normal de uma quadrica em um determinado ponto
 T3 normalQuadric(Object object, T3 point) {
+    /*
+     * f(x,y,z) = ax^2 + by^2 + cz^2 + 2dxy + 2eyz + 2fxz + 2gx + 2hy + 2jz + k = 0 forma quadratica
+     * Equacao da normal encontrada no site http://euclid.nmu.edu/~bpeterso/CS446-Handouts/Notes/CS446_Note_7.pdf
+     *
+     */
     T3 ret;
     double x = point.x;
     double y = point.y;
@@ -381,148 +417,168 @@ T3 normalQuadric(Object object, T3 point) {
     double g = object.g;
     double h = object.h;
     double j = object.j;
-    ret.x = (2*a*x) + (2*d*y) + (2*f*z) + (2*g);
-    ret.y = (2*b*y) + (2*d*x) + (2*e*z) + (2*h);
-    ret.z = (2*c*z) + (2*e*y) + (2*f*x) + (2*j);
+    ret.x = (2*a*x) + (2*e*z) + (2*f*y) + (2*g);
+    ret.y = (2*b*y) + (2*d*z) + (2*f*x) + (2*h);
+    ret.z = (2*c*z) + (2*d*y) + (2*e*x) + (2*j);
 
     return ret;
 }
 
-// calcula a normal e retorna-a normalizada
-T3 calcNormalNormalized(Object object, Ray ray) {
-    T3 point = intersectionPoint(ray, object);
-    T3 normal = normalQuadric(object, point);
-    normal = normalize(normal);
-    return normal;
-}
-
-// calcula o vetor a partir da constante e retorna-o normalizado
-T3 moveVector(double c, T3 ray) {
-    T3 toReturn;
-    toReturn.x = c*ray.x;
-    toReturn.y = c*ray.y;
-    toReturn.z = c*ray.z;
-
-    return toReturn;
-}
-
-// Calculate the ray to be reflected in the recursion
+// Calcular o raio refletido para realizar a recursao do raytracing
 Ray reflectionRay(Object object, Ray ray){
+    /*
+     * 1) Ponto de interseccao entre o raio e o objeto
+     * 2) No ponto encontrado deveremos encontrar o vetor normal (N)
+     * 3) Calculamos o vetor que atingiu o objeto (V). Como o sentido de V eh ray.org -> intersectPoint, devemos
+     *    inverter o seu sentido: V = - V
+     * 4) Tendo em posse o vetor normal e o vetor de incidencia de luz, calculamos o vetor refletido a partir da
+     *    equacao: R = 2*<N,V>*N - V
+     *    OBS: Quando temos <N,L> < 0, significa que a normal esta dentro do objeto. Logo N = -N
+     * 5) Tendo entao o ponto de origem e o vetor de direcao do raio, podemos fazer o nosso Ray rayReflected, aumen-
+     *    Tando em 1 a sua profundidade.
+     */
     T3 intersectPoint = intersectionPoint(ray, object);
-    T3 normalObject = normalQuadric(object, intersectPoint);
-    normalObject = normalize(normalObject);
+    T3 N = normalQuadric(object, intersectPoint);
+    N = normalize(N);
 
-    T3 lightRay = ray.dir;
-    lightRay = lightRay*(-1);
-    lightRay = normalize(lightRay);
+    T3 V = ray.dir;
+    V = V*(-1);
+    V = normalize(V);
 
-    double cos = lightRay%normalObject;
-    Ray ret = Ray(intersectPoint, (normalObject*(2*cos)-lightRay), ray.depth+1);
+    double cosNV = N%V;
+    if(cosNV < 0) N = N*(-1);
+    T3 R = N*(2*cosNV)-V;
+    Ray rayReflected = Ray(intersectPoint, R, ray.depth+1);
 
-    return ret;
+    return rayReflected;
 }
 
-//r = i - 2*n(<n,i>)
+//Metodo para calcular a componente especular da equacao de Phong
 double calcSpecularIntensity(Ray ray, Object object, Light light){
+    /*
+     * Is = ks*Il*(<R,V>)^n
+     * 1) Calculamos o ponto de interseccao entre o raio e o objeto
+     * 2) Vejo se existe algum objeto entre este mesmo e o foco de luz. Caso exista, nao deveremos colocar nenhuma
+     *    cor
+     * 3) Tendo em posse esse ponto, podemos calcular o vetor normal ao objeto naquele local (N)
+     * 4) Calculamos entao o vetor que aponta para o foco de luz atual (tendo em vista que uma cena pode conter
+     *    varios focos de luz. Como a direcao da luz esta no sentido luz->objeto, devemos inverte-la: L = - L
+     * 5) Com o L e N, podemos calcular o vetor refletido pelo objeto usando a equacao
+     *    R = 2*<N,L>*N - 1.
+     *    OBS: Caso o <N,L> < 0, nao teremos componente especular. Existe outro caso que sera explicitado mais a frente
+     * 6) Calculamos o vetor incidente de visao(V), no caso o ray.dir. Da mesma forma que no metodo de reflexao, o sen-
+     *    tido desse vetor esta invertido. V = -V
+     * 7) De posse do V e R, podemos calcular a componente especular:
+     *    Is = ks*Il*(<R,V>)^n
+     *    OBS: Caso <R,V> < 0, nao existe componente especular
+     */
     T3 intersectPoint = intersectionPoint(ray, object);
-    T3 normalObject = normalQuadric(object, intersectPoint);
-    normalObject = normalize(normalObject);
+    T3 L = light.dir;
+    L = L*(-1);
+    L = normalize(L);
+    Ray shadow = Ray(intersectPoint, L, 0);
+    if(isShadow(shadow)) return 0;
 
-    T3 lightVector = light.dir;
-    lightVector = lightVector*(-1);
-    lightVector = normalize(lightVector);
+    T3 N = normalQuadric(object, intersectPoint);
+    N = normalize(N);
 
-    double cosR = lightVector%normalObject;
-    if(cosR < 0) cosR = 0;
-    T3 r = normalObject*(2*cosR) - lightVector;
-    r = normalize(r);
+    double cosNL = N%L;
+    if(cosNL < 0) return 0;
+    T3 R = N*(2*cosNL) - L;
+    R = normalize(R);
 
-    Ray lightRay = Ray(intersectPoint, lightVector, 0);
-    if(!isShadow(lightRay)){
-        T3 v = ray.dir;
-        v = v*(-1);
-        v = normalize(v);
-        double cos = r%v;
-        if(cos < 0) cos = 0;
-        return light.intensity * object.ks * pow(cos, object.n);
-    }
-    return 0;
+    T3 V = ray.dir;
+    V = V*(-1);
+    V = normalize(V);
+
+    double cosRV = R%V;
+    if(cosRV < 0) return 0;
+    double Is = object.ks*light.intensity*pow(cosRV, object.n);
+    return Is;
+
 }
 
 double calcDifusalIntensity(Ray ray, Object object, Light light) {
+    /*
+     * Id = kd*Il*<N,L>
+     * 1) Calculando o ponto de interseccao entre o raio e o objeto
+     * 2) Vemos se a luz consegue alcancar nessa superficie. Caso exista algum objeto entre a luz e este mesmo,
+     *    nao deve haver cor aqui
+     * 3) Calculando o vetor normal ao objeto no ponto especificado (N)
+     * 4) Calculamos o vetor que aponta para a luz (L)
+     * 5) Aplicamos a equacao acima
+     *    OBS: se <N,L> < 0, nao teremos componente difusa
+     */
     T3 intersectPoint = intersectionPoint(ray, object);
-    T3 normalObject = normalQuadric(object, intersectPoint);
-    normalObject = normalize(normalObject);
+    T3 L = light.dir;
+    L = L*(-1);
+    L = normalize(L);
+    Ray shadow = Ray(intersectPoint, L, 0);
+    if(isShadow(shadow)) return 0;
 
-    T3 lightVec = light.dir;
-    lightVec = lightVec * (-1);
-    lightVec = normalize(lightVec);
+    T3 N = normalQuadric(object, intersectPoint);
+    N = normalize(N);
 
-    Ray lightRay = Ray(intersectPoint, lightVec, 0);
-    if(!isShadow(lightRay)){
-        double cos = lightVec%normalObject;
-        if(cos < 0) {
-            cos = 0;
-        };
-        //Ip * kd * cos
-        return light.intensity * object.kd * cos;
-    }
-    return 0;
+    double cosNL = N%L;
+    if(cosNL < 0) return 0;
+
+    double Id = object.kd*light.intensity*cosNL;
+    return Id;
 }
 
-T3 shade (Object object, Ray ray){
-    T3 ret;
+Color shading (Object object, Ray ray){
+    Color ret;
     double iAmbient = object.ka*ambient, iDifusal = 0.0, iSpecular = 0.0;
     for(int i = 0; i < lights.size(); ++i){
         iSpecular += calcSpecularIntensity(ray, object, lights[i]);
         iDifusal += calcDifusalIntensity(ray, object, lights[i]);
     }
-    ret.x = object.color.r * (iAmbient + iDifusal) + iSpecular;
-    ret.y = object.color.g * (iAmbient + iDifusal) + iSpecular;
-    ret.z = object.color.b * (iAmbient + iDifusal) + iSpecular;
+    ret.r = object.color.r * (iAmbient + iDifusal) + iSpecular;
+    ret.g = object.color.g * (iAmbient + iDifusal) + iSpecular;
+    ret.b = object.color.b * (iAmbient + iDifusal) + iSpecular;
 
-    ret.x = min(ret.x, 1.0);
-    ret.y = min(ret.y, 1.0);
-    ret.z = min(ret.z, 1.0);
+    ret.r = min(ret.r, 1.0);
+    ret.g = min(ret.g, 1.0);
+    ret.b = min(ret.b, 1.0);
 
     return ret;
 }
 
-T3 merge(Object object, T3 color, T3 refColor) {
-    T3 ret;
-    ret.x = ((1 - object.KS - object.KT) * color.x) + (object.KS*refColor.x);
-    ret.y = ((1 - object.KS - object.KT) * color.y) + (object.KS*refColor.y);
-    ret.z = ((1 - object.KS - object.KT) * color.z) + (object.KS*refColor.z);
+Color merge(Object object, Color color, Color refColor) {
+    Color ret;
+    ret.r = ((1 - object.KS - object.KT) * color.r) + (object.KS*refColor.r);
+    ret.g = ((1 - object.KS - object.KT) * color.g) + (object.KS*refColor.g);
+    ret.b = ((1 - object.KS - object.KT) * color.b) + (object.KS*refColor.b);
     return ret;
 }
 
-void normalizeColor(T3 *color) {
-    color->x = min(color->x, 1.0);
-    color->y = min(color->y, 1.0);
-    color->z = min(color->z, 1.0);
+void normalizeColor(Color *color) {
+    color->r = min(color->r, 1.0);
+    color->g = min(color->g, 1.0);
+    color->b = min(color->b, 1.0);
 }
 
-T3 rayTracing(Ray &ray) {
-    T3 ret;
+Color rayTracing(Ray &ray) {
+    Color ret;
     int objectIndex = nextObject(ray, objects);
     if (objectIndex < 0) {
         if(ray.depth == 0){
-            ret.x = background.x;
-            ret.y = background.y;
-            ret.z = background.z;
+            ret.r = background.x;
+            ret.g = background.y;
+            ret.b = background.z;
             return ret;
 
         }
-        ret.x = 0.0;
-        ret.y = 0.0;
-        ret.z = 0.0;
+        ret.r = 0.0;
+        ret.g = 0.0;
+        ret.b = 0.0;
         return ret;
     }
     Object object = objects[objectIndex];
-    T3 color;
-    color = shade(object, ray);
+    Color color;
+    color = shading(object, ray);
 
-    T3 refColor = {0.0, 0.0, 0.0};
+    Color refColor = {0.0, 0.0, 0.0};
 
     if(ray.depth < depth) {
         if(object.KS > 0) {
@@ -536,6 +592,17 @@ T3 rayTracing(Ray &ray) {
     normalizeColor(&ret);
 
     return ret;
+}
+
+void printImage(const vector<vector<Color>> &objMatrix) {
+    cout << "P3" << endl;
+    cout << size.w << " " << size.h << endl;
+    cout << 255 << endl;
+    for(int i = 0; i < size.h; ++i){
+        for(int j = 0; j < size.w; ++j){
+            cout << objMatrix[i][j].r << " " << objMatrix[i][j].g << " " << objMatrix[i][j].b << endl;
+        }
+    }
 }
 
 
