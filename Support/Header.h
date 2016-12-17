@@ -110,13 +110,68 @@ struct Camera {
     }
 };
 
+struct Texture {
+    int wres, hres, maxGrey;
+    string magicValue;
+    vector< vector<Color> > texMatrix;
+
+    Texture(){};
+    Texture (string filePath) {
+        int lineCounter = 1;
+        std::ifstream ifs;
+        ifs.open (filePath, std::ifstream::in);
+        while(!ifs.eof()) {
+            if(ifs.peek() == '\n' || ifs.peek() == ' ') {
+                ifs.get();
+            }
+            else if(ifs.peek() == '#'){
+                ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+            else {
+                if(lineCounter == 1 && ifs.peek() == 'P'){
+                    ++lineCounter;
+                    ifs >> magicValue;
+                }
+                else if(lineCounter == 2) {
+                    ifs >> wres >> hres;
+                    texMatrix = vector< vector<Color> >(hres);
+                    for(int k = 0; k < hres; ++k) {
+                        texMatrix[k] = vector<Color>(wres);
+                    }
+                    ++lineCounter;
+                }
+                else if (lineCounter==3){
+                    ifs >> maxGrey;
+                    ++lineCounter;
+                }
+                else if(lineCounter == 4) {
+                    for (int i = 0; i < hres; ++i) {
+                        for (int j = 0; j < wres; ++j) {
+                            double r, g, b;
+                            ifs >> r >> g >> b;
+                            Color color = Color(r, g, b);
+                            texMatrix[i][j] = color;
+                        }
+                    }
+                    ++lineCounter;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        ifs.close();
+    }
+};
+
 struct Object{
     double a, b, c, d, e ,f, g, h, j, k, ka, kd, ks, KS, KT, ir;
     int n;
     Color color;
+    Texture *texture;
 
     Object(double a, double b, double c, double d, double e, double f, double g, double h, double j, double k,
-           double ka, double kd, double ks, int n, double KS, double KT, double ir, Color color) {
+           double ka, double kd, double ks, int n, double KS, double KT, double ir, Color color, Texture *texture) {
         this->a = a;
         this->b = b;
         this->c = c;
@@ -135,6 +190,7 @@ struct Object{
         this->KT = KT;
         this->ir = ir;
         this->color = color;
+        this->texture = texture;
     }
 };
 
@@ -148,48 +204,6 @@ struct Ray {
         this->dir = dir;
         this->depth = depth;
     }
-};
-
-struct Texture {
-    int wres, hres, maxGrey;
-    string magicValue;
-    vector< vector<Color> > texMatrix;
-
-    Texture();
-    Texture (string &filePath) {
-        int lineCounter = 1;
-        ifstream ifs;
-        ifs.open(filePath, std::ifstream::in);
-        while(ifs.eof()) {
-            if(ifs.peek() == '\n' || ifs.peek() == ' ') {
-                ifs.get();
-            }
-            else if(ifs.peek() == '#'){
-                ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            }
-            else {
-                if(ifs.peek() == 'P'){
-                    ++lineCounter;
-                    ifs >> magicValue;
-                }
-                else if(lineCounter == 2) {
-                    ifs >> wres >> hres;
-                    ++lineCounter;
-                }
-                else {
-                    for(int i = 0; i < hres; ++i) {
-                        for(int j = 0; j < wres; ++j) {
-                            double r, g, b;
-                            ifs >> r >> g >> b;
-                            Color color = Color(r,g,b);
-                            texMatrix[i][j] = color;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 };
 
 Size size;
@@ -601,6 +615,18 @@ void printImage(const vector<vector<Color>> &objMatrix) {
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
             cout << objMatrix[i][j].r << " " << objMatrix[i][j].g << " " << objMatrix[i][j].b << endl;
+        }
+    }
+}
+
+//Metodo para teste. Imprime o PNM de uma textura de dado objeto
+void getPNMTexture(int objectIndex) {
+    cout << "P3" << endl;
+    cout << objects[objectIndex].texture->wres << " " << objects[objectIndex].texture->hres << endl;
+    cout << 255 << endl;
+    for(int i = 0; i < objects[objectIndex].texture->hres; ++i){
+        for(int j = 0; j < objects[objectIndex].texture->wres; ++j) {
+            cout << objects[objectIndex].texture->texMatrix[i][j].r  << " " << objects[objectIndex].texture->texMatrix[i][j].g << " " << objects[objectIndex].texture->texMatrix[i][j].b << endl;
         }
     }
 }

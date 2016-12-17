@@ -2,6 +2,8 @@
 
 void printImage(const vector<vector<Color>> &objMatrix);
 
+void getPNMTexture(int objectIndex);
+
 using namespace std;
 
 //O vetor diretor da Camera sempre é (0,0,1) pois esse vetor deve ser paralelo ao vetor normal ao grid.
@@ -39,6 +41,10 @@ int main(void){
         }
     }
     printImage(objMatrix);
+    //getPNMTexture(0);
+
     return 0;
 }
+
+
 

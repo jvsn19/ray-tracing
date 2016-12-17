@@ -68,7 +68,7 @@ SDL::SDL(std::string path) {
                 ifs >> this->depth;
             }
             else if(!tag.compare("object")){
-
+                string texPath;
                 double a, b, c, d, e, f, g, h, j, k, red, green, blue, ka, kd, ks, n, KS, KT, ir;
                 ifs >> a
                     >> b
@@ -89,9 +89,13 @@ SDL::SDL(std::string path) {
                     >> n
                     >> KS
                     >> KT
-                    >> ir;
+                    >> ir
+                    >> texPath;
+                Texture *texture;
+                if(texPath.compare("null")) texture = new Texture(texPath);
+                else texture = nullptr;
                 Color color = Color(red,green,blue);
-                Object object = Object(a, b, c, d, e, f, g, h, j, k, ka, kd, ks, n, KS, KT, ir, color);
+                Object object = Object(a, b, c, d, e, f, g, h, j, k, ka, kd, ks, n, KS, KT, ir, color, texture);
                 this->objects.push_back(object);
             }
         }
