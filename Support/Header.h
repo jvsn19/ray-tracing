@@ -5,6 +5,10 @@
 #ifndef RT_HEADER_H
 #define RT_HEADER_H
 #define INF 1e10
+#define PI 3.14159265359
+#define TWO_PI 6.28318530718
+#define invPI 0.31830988618
+#define invTWO_PI 0.15915494309
 #include <algorithm>
 #include <utility>
 #include <cstdio>
@@ -81,6 +85,10 @@ struct Color{
         Color color = Color(r*val, g*val, b*val);
         return color;
     }
+    Color operator+(Color t) {
+        Color ret = Color(r+t.r, g+t.g, b+t.b);
+        return ret;
+    }
 };
 
 struct Ortho{
@@ -149,7 +157,7 @@ struct Texture {
                         for (int j = 0; j < wres; ++j) {
                             double r, g, b;
                             ifs >> r >> g >> b;
-                            Color color = Color(r, g, b);
+                            Color color = Color(r/255.0, g/255.0, b/255.0);
                             texMatrix[i][j] = color;
                         }
                     }
@@ -366,15 +374,15 @@ bool isShadow(Ray ray) {
 }
 
 //Metodo complementar para formar o vetor diretor do raio.
-T3 getDir(int i, int j) {
+T3 getDir(double i, double j) {
     T3 ret;
     ret.z = 0;  //A janela esta no plano z = 0
     /*pw e ph calculados anteriormente.
      *pw = pixel weight. Calculado dividindo o comprimento total da janela fabs(x1 - x0) pela resolucao
      *ph = pixel height. Mesmo calculo, porem utilizando y1 - y0
     */
-    ret.x = (ortho.x0 + pw/2) + (pw*j);
-    ret.y = (ortho.y1 - ph/2) - (ph*i);
+    ret.x = (ortho.x0 + pw/2.0) + (pw*j);
+    ret.y = (ortho.y1 - ph/2.0) - (ph*i);
     return ret;
 }
 
@@ -514,7 +522,7 @@ double calcSpecularIntensity(Ray ray, Object object, Light light){
 
 double calcDifusalIntensity(Ray ray, Object object, Light light) {
     /*
-     * Id = kd*Il*<N,L>
+     * Id = kd*Il*Od*<N,L>
      * 1) Calculando o ponto de interseccao entre o raio e o objeto
      * 2) Vemos se a luz consegue alcancar nessa superficie. Caso exista algum objeto entre a luz e este mesmo,
      *    nao deve haver cor aqui
@@ -522,6 +530,7 @@ double calcDifusalIntensity(Ray ray, Object object, Light light) {
      * 4) Calculamos o vetor que aponta para a luz (L)
      * 5) Aplicamos a equacao acima
      *    OBS: se <N,L> < 0, nao teremos componente difusa
+     *    OBS2: na equacao temos o Od. O mesmo sera calculado posteriormente
      */
     T3 intersectPoint = intersectionPoint(ray, object);
     T3 L = light.dir;
@@ -540,36 +549,68 @@ double calcDifusalIntensity(Ray ray, Object object, Light light) {
     return Id;
 }
 
+void normalizeColor(Color *color) {
+    color->r = min(color->r, 1.0);
+    color->g = min(color->g, 1.0);
+    color->b = min(color->b, 1.0);
+}
+
+Color getTextureColor(Object object, Ray ray) {
+    /*
+     * Metodo para retornar a cor da textura do objeto. As equacoes foram pesquisadas no livro "Ray Tracing from the
+     * ground up"
+     * 1) Calcular o ponto de interseccao do objeto com o raio
+     * 2) Calcular o theta e phi a partir do ponto de interseccao
+     * 3) Mapear theta e phi para (u,v) onde [0,1]x[0,1]
+     */
+
+    T3 intersectPoint = intersectionPoint(ray, object);
+
+    double theta = acos(intersectPoint.y);
+    double phi = atan2(intersectPoint.x, intersectPoint.z);
+    if(phi < 0.0) {
+        phi += TWO_PI;
+    }
+
+    double u = phi * invTWO_PI;
+    double v = 1-theta*invPI;
+
+    int column = (int) ((object.texture->wres -1 )*u);
+    int row = (int) ((object.texture->hres - 1)*v);
+
+    return object.texture->texMatrix[row][column];
+}
+
 Color shading (Object object, Ray ray){
     Color ret;
-    double iAmbient = object.ka*ambient, iDifusal = 0.0, iSpecular = 0.0;
-    for(int i = 0; i < lights.size(); ++i){
-        iSpecular += calcSpecularIntensity(ray, object, lights[i]);
-        iDifusal += calcDifusalIntensity(ray, object, lights[i]);
-    }
-    ret.r = object.color.r * (iAmbient + iDifusal) + iSpecular;
-    ret.g = object.color.g * (iAmbient + iDifusal) + iSpecular;
-    ret.b = object.color.b * (iAmbient + iDifusal) + iSpecular;
 
-    ret.r = min(ret.r, 1.0);
-    ret.g = min(ret.g, 1.0);
-    ret.b = min(ret.b, 1.0);
+    if(object.texture != nullptr) {
+        Color texture = getTextureColor(object, ray);
+        return texture;
+    }
+    //Ia = ka*Il
+    double Ia = object.ka*ambient, Id = 0.0, Is= 0.0;
+    for(int i = 0; i < lights.size(); ++i){
+        Is += calcSpecularIntensity(ray, object, lights[i]);
+        Id+= calcDifusalIntensity(ray, object, lights[i]);
+    }
+
+    //Para a componente difusa e ambiente, devemos multiplicar o Id e Ia por Od
+    ret.r = object.color.r*Ia + object.color.r*Id + Is;
+    ret.g = object.color.g*Ia + object.color.g*Id + Is;
+    ret.b = object.color.b*Ia + object.color.b*Id + Is;
+
+    normalizeColor(&ret);
 
     return ret;
 }
 
 Color merge(Object object, Color color, Color refColor) {
     Color ret;
-    ret.r = ((1 - object.KS - object.KT) * color.r) + (object.KS*refColor.r);
-    ret.g = ((1 - object.KS - object.KT) * color.g) + (object.KS*refColor.g);
-    ret.b = ((1 - object.KS - object.KT) * color.b) + (object.KS*refColor.b);
+    ret.r = color.r + (object.KS*refColor.r);
+    ret.g = color.g + (object.KS*refColor.g);
+    ret.b = color.b + (object.KS*refColor.b);
     return ret;
-}
-
-void normalizeColor(Color *color) {
-    color->r = min(color->r, 1.0);
-    color->g = min(color->g, 1.0);
-    color->b = min(color->b, 1.0);
 }
 
 Color rayTracing(Ray &ray) {
