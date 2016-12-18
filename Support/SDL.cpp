@@ -42,10 +42,10 @@ SDL::SDL(std::string path) {
                 this->size = size;
             }
             else if(!tag.compare("background")){
-                T3 background = T3();
-                ifs >> background.x
-                    >> background.y
-                    >> background.z;
+                Color background = Color();
+                ifs >> background.r
+                    >> background.g
+                    >> background.b;
                 this->background = background;
             }
             else if(!tag.compare("ambient")){
@@ -119,7 +119,7 @@ Size SDL::getSize(){
     return this->size;
 }
 
-T3 SDL::getBackground(){
+Color SDL::getBackground(){
     return this->background;
 }
 

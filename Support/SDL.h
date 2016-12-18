@@ -57,7 +57,7 @@ class SDL {
     T3 eye;
     Ortho ortho;
     Size size;
-    T3 background;
+    Color background;
     double ambient;
     std::vector<Light> lights;
     bool supersampling;
@@ -71,7 +71,7 @@ public:
     T3 getEye();
     Ortho getOrtho();
     Size getSize();
-    T3 getBackground();
+    Color getBackground();
     double getAmbient();
     std::vector<Light> getLights();
     bool getSuperSampling();

@@ -7,7 +7,12 @@ using namespace std;
 //O vetor diretor da Camera sempre é (0,0,1) pois esse vetor deve ser paralelo ao vetor normal ao grid.
 
 int main(void){
-    SDL sdl = SDL("Files/onesphere.sdl");
+    string path;
+    ifstream ifs;
+    ifs.open("entrada.in", std::ifstream::in);
+    ifs >> path;
+    ifs.close();
+    SDL sdl = SDL(path);
 
     //Recuperando os elementos da cena
     size = sdl.getSize();
@@ -18,8 +23,9 @@ int main(void){
     ambient = sdl.getAmbient();
     supersampling = sdl.getSuperSampling();
     depth = sdl.getDepth();
-    ph = fabs(ortho.x1 - ortho.x0) / size.w;    //Pixel's weight
-    pw = fabs(ortho.y1 - ortho.y0) / size.h;    //Pixel's height
+    ph = fabs(ortho.x1 - ortho.x0) / size.w;    //Largura do pixel
+    pw = fabs(ortho.y1 - ortho.y0) / size.h;    //Comprimento do pixel
+    outputFile = sdl.getOutput();
 
     //Formalizando a direcao da luz
     for(int i = 0; i < lights.size(); ++i){
@@ -29,9 +35,6 @@ int main(void){
     vector< vector<Color> > objMatrix((unsigned long) size.h);
     for(int i = 0; i < size.h; ++i) {
         objMatrix[i] = vector<Color>((unsigned long) size.w);
-        for(int j = 0; j < size.w; ++j) {
-            objMatrix[i][j] = Color(0.0, 0.0, 0.0);
-        }
     }
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
@@ -48,7 +51,6 @@ int main(void){
         }
     }
     printImage(objMatrix);
-    //getPNMTexture(0);
 
     return 0;
 }

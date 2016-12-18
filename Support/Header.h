@@ -104,20 +104,6 @@ struct Light {
     double intensity;
 };
 
-struct Camera {
-    T3 coords, dir, u, v;
-    double dist, hx, hy;
-    Camera(T3& coods, T3& u, T3& v, double dist, double hx, double hy) {
-        dir = T3{0,0,1};    //The ortho plain is fixed on the z plan.
-        this->coords = coords;
-        this->u = u;
-        this->v = v;
-        this->dist = dist;
-        this->hx = hx;
-        this->hy = hy;
-    }
-};
-
 struct Texture {
     int wres, hres, maxGrey;
     string magicValue;
@@ -223,12 +209,13 @@ Size size;
 Ortho ortho;
 vector<Object> objects;
 vector<Light> lights;
-T3 background;
+Color background;
 double ambient;
 bool supersampling;
 int depth;
 double pw;
 double ph;
+string outputFile;
 
 T3  normalize( T3 v ) {
     T3 retorno;
@@ -616,9 +603,9 @@ Color rayTracing(Ray &ray) {
     int objectIndex = nextObject(ray, objects);
     if (objectIndex < 0) {
         if(ray.depth == 0){
-            ret.r = background.x;
-            ret.g = background.y;
-            ret.b = background.z;
+            ret.r = background.r;
+            ret.g = background.g;
+            ret.b = background.b;
             return ret;
 
         }
@@ -648,26 +635,18 @@ Color rayTracing(Ray &ray) {
 }
 
 void printImage(const vector<vector<Color>> &objMatrix) {
-    cout << "P3" << endl;
-    cout << size.w << " " << size.h << endl;
-    cout << 255 << endl;
+    ofstream osf;
+    string outputPath = "Files/" + outputFile;
+    osf.open(outputPath);
+    osf << "P3" << endl;
+    osf << size.w << " " << size.h << endl;
+    osf << 255 << endl;
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
-            cout << objMatrix[i][j].r << " " << objMatrix[i][j].g << " " << objMatrix[i][j].b << endl;
+            osf << objMatrix[i][j].r << " " << objMatrix[i][j].g << " " << objMatrix[i][j].b << endl;
         }
     }
-}
-
-//Metodo para teste. Imprime o PNM de uma textura de dado objeto
-void getPNMTexture(int objectIndex) {
-    cout << "P3" << endl;
-    cout << objects[objectIndex].texture->wres << " " << objects[objectIndex].texture->hres << endl;
-    cout << 255 << endl;
-    for(int i = 0; i < objects[objectIndex].texture->hres; ++i){
-        for(int j = 0; j < objects[objectIndex].texture->wres; ++j) {
-            cout << objects[objectIndex].texture->texMatrix[i][j].r  << " " << objects[objectIndex].texture->texMatrix[i][j].g << " " << objects[objectIndex].texture->texMatrix[i][j].b << endl;
-        }
-    }
+    osf.close();
 }
 
 
