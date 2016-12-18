@@ -569,10 +569,10 @@ Color getTextureColor(Object object, Ray ray) {
     double phi = atan2(N.z, N.x);
     double theta = asin(N.y);
 
-    double u = -(0.5 + phi * invTWO_PI);
+    double u = 0.5 + phi * invTWO_PI;
     double v = 0.5 - theta*invPI;
 
-    int column = (int) ((object.texture->wres -1 )*u);
+    int column = (int) ((object.texture->wres -1 )*(1-u));
     int row = (int) ((object.texture->hres - 1)*v);
     return object.texture->texMatrix[row][column];
 }
