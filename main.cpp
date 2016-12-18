@@ -38,16 +38,27 @@ int main(void){
     }
     for(int i = 0; i < size.h; ++i){
         for(int j = 0; j < size.w; ++j){
-            //Supersampling
-            for(double frag_i = i; frag_i < i+1.0; frag_i += 0.5){
-                for(double frag_j = j; frag_j <= j + 1.0; frag_j += 0.5){
-                    T3 direction = (getDir(frag_i, frag_j) - sdl.getEye());
-                    Ray ray = Ray(sdl.getEye(), direction, 0);
-                    objMatrix[i][j] = objMatrix[i][j] + (rayTracing(ray))*0.15; //Diminui o coeficiente de cada raio
-                }
-            }
-            normalizeColor(&objMatrix[i][j]);
-            objMatrix[i][j] = objMatrix[i][j]*255;
+			if(supersampling) {
+				//Supersampling
+				for(double frag_i = i; frag_i < i+1.0; frag_i += 0.5){
+				    for(double frag_j = j; frag_j <= j + 1.0; frag_j += 0.5){
+				        T3 direction = (getDir(frag_i, frag_j) - sdl.getEye());
+						direction = normalize(direction);
+				        Ray ray = Ray(sdl.getEye(), direction, 0);
+				        objMatrix[i][j] = objMatrix[i][j] + (rayTracing(ray))*0.25; //Diminui o coeficiente de cada raio
+				    }
+				}
+				normalizeColor(&objMatrix[i][j]);
+				objMatrix[i][j] = objMatrix[i][j]*255;
+		    }
+		    else {
+		    	T3 direction = (getDir(i, j) - sdl.getEye());
+				direction = normalize(direction);
+				Ray ray = Ray(sdl.getEye(), direction, 0);
+				objMatrix[i][j] = rayTracing(ray);
+				normalizeColor(&objMatrix[i][j]);
+				objMatrix[i][j] = objMatrix[i][j]*255;
+		    }
         }
     }
     printImage(objMatrix);

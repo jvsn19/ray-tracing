@@ -447,7 +447,7 @@ Ray reflectionRay(Object object, Ray ray){
      *    inverter o seu sentido: V = - V
      * 4) Tendo em posse o vetor normal e o vetor de incidencia de luz, calculamos o vetor refletido a partir da
      *    equacao: R = 2*<N,V>*N - V
-     *    OBS: Quando temos <N,L> < 0, significa que a normal esta dentro do objeto. Logo N = -N
+     *    OBS: Quando temos <N,V> < 0, significa que a normal esta dentro do objeto. Logo N = -N
      * 5) Tendo entao o ponto de origem e o vetor de direcao do raio, podemos fazer o nosso Ray rayReflected, aumen-
      *    Tando em 1 a sua profundidade.
      */

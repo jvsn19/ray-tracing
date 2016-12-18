@@ -1,0 +1,31 @@
+eye 0.0 0.0 10.0
+size 1080 1080
+ortho -2 -2 2 2
+ambient 0.8
+# light definition
+# x y z  intensity
+light 1.0 0.0 0.0 1.0
+light 0.5 1.0 0.5 1.0
+light 0 0.1 0.5 1.0
+#object definition
+
+#		a   b	c	d	e	f	  g	  h	  j	    k	 r	 g   b  Ka  Kd  Ks  n
+#object 1.0 1.0 1.0 0.0 0.0 0.0 -1.4 0.0 10.0 100.0 1.0 0.0 0.0 0.1 0.5 0.9 5 0.0 -0.2 1 Files/test.pnm
+# earth sphere at x=1, y=0, z=-12 radius=2
+#		a   b	c	d	e	f	g	h	j	  k	   r   g   b  Ka  Kd  Ks  n
+object 1.0 1.0 1.0 0.0 0.0 0.0 3.0 -1.4 12.7 168.0 0.0 0.0 0.0 0.4 0.5 0.6 5 0.0 0 1 Files/test3.pnm
+
+object 1.0 1.0 1.0 0.0 0.0 0.0 -3.0 -1.2 12.9 160.0 0.0 0.0 0.0 0.4 0.5 0.6 5 0.0 0 1 Files/test4.pnm
+
+#plane 1
+#		a   b	c	d	e	f	g	h	j	  k	  r	  g   b  Ka  Kd  Ks  n
+object 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.5  30.0 0.2 0.2 0.2 0.1 0.5 0.0 5 0.3 0 1 null
+#plane 2
+#		a   b	c	d	e	f	g	h	j	  k	  r	  g   b  Ka  Kd  Ks  n
+object 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0   5.0 0.2 0.2 0.2 0.1 0.5 0.0 5 1 0 1 null
+#
+# background color
+background 0.2 0.2 0.2
+profundidade 1
+output earth_jupiter.pnm
+supersample on
